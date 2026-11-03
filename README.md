@@ -17,10 +17,12 @@ The installer asks for administrator permission and applies the setting to
 currently connected Wi-Fi interfaces. It also installs a dispatcher so the
 setting is applied after future connections.
 
-If SteamOS reports that its system filesystem is read-only, run
-`sudo steamos-readonly disable`, install, and then run
-`sudo steamos-readonly enable`. Changes under `/etc` may need to be reinstalled
-after a SteamOS system update.
+SteamOS keeps `/etc` on a writable overlay even while the base system
+filesystem is read-only, so this installer should not require disabling
+read-only mode. SteamOS updates may discard `/etc` files that are not on the
+update keep-list. This installer does not add the dispatcher to that list, so
+check whether it is still installed after a system update and reinstall if
+needed.
 
 ## Uninstall
 
