@@ -15,14 +15,16 @@ curl -fsSL https://raw.githubusercontent.com/dylanjphelps/steamos-wifi-bgscan/ma
 
 The installer asks for administrator permission and applies the setting to
 currently connected Wi-Fi interfaces. It also installs a dispatcher so the
-setting is applied after future connections.
+setting is applied after future connections. If a Wi-Fi connection is active
+but wpa_supplicant cannot control it, the installer stops with an error.
+When no Wi-Fi network is connected, the backend cannot be verified until the
+next connection.
 
 SteamOS keeps `/etc` on a writable overlay even while the base system
 filesystem is read-only, so this installer should not require disabling
-read-only mode. SteamOS updates may discard `/etc` files that are not on the
-update keep-list. This installer does not add the dispatcher to that list, so
-check whether it is still installed after a system update and reinstall if
-needed.
+read-only mode. On systems with `/etc/atomic-update.conf.d`, the installer
+registers the dispatcher in SteamOS's update keep-list. If that directory is
+not available, the installer warns that a system update may remove it.
 
 ## Uninstall
 
@@ -30,9 +32,10 @@ needed.
 curl -fsSL https://raw.githubusercontent.com/dylanjphelps/steamos-wifi-bgscan/main/uninstall.sh | bash
 ```
 
-The uninstaller removes only this tool's NetworkManager dispatcher. If the
-current connection has already had background scanning disabled, disconnect
-and reconnect Wi-Fi to let wpa_supplicant reload the network settings.
+The uninstaller removes this tool's NetworkManager dispatcher and update
+keep-list entry. If the current connection has already had background scanning
+disabled, disconnect and reconnect Wi-Fi to let wpa_supplicant reload the
+network settings.
 
 ## Compatibility and trade-offs
 
@@ -47,3 +50,8 @@ access point while connected. Roaming between access points may therefore be
 slower or may not happen until the current connection drops. Access-point
 assisted roaming may still work. This changes neither scans made while
 disconnected nor scans explicitly requested by the system or user.
+
+## Test
+
+Run `tests/dispatcher.sh` to exercise connection-event handling and backend
+failure behavior with mocked NetworkManager and wpa_supplicant commands.

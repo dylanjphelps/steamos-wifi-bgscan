@@ -8,36 +8,43 @@ event="${2:-}"
 [ "$event" = "up" ] || exit 0
 [ -n "$interface" ] || exit 0
 
-device_type="$(nmcli -g GENERAL.TYPE device show "$interface" 2>/dev/null)" || exit 0
+log_message() {
+    logger -t steamos-wifi-bgscan "$*" 2>/dev/null || :
+}
+
+if ! device_type="$(nmcli -g GENERAL.TYPE device show "$interface" 2>/dev/null)"; then
+    log_message "could not determine the device type for $interface"
+    exit 1
+fi
 case "$device_type" in
     wifi|802-11-wireless) ;;
     *) exit 0 ;;
 esac
 
 if ! command -v wpa_cli >/dev/null 2>&1; then
-    logger -t steamos-wifi-bgscan "wpa_cli is unavailable; cannot disable background scans on $interface"
-    exit 0
+    log_message "wpa_cli is unavailable; cannot disable background scans on $interface"
+    exit 1
 fi
 
 networks="$(wpa_cli -i "$interface" list_networks 2>/dev/null)" || {
-    logger -t steamos-wifi-bgscan "wpa_supplicant is unavailable on $interface; no change made"
-    exit 0
+    log_message "wpa_supplicant is unavailable on $interface; no change made"
+    exit 1
 }
 network_id="$(printf '%s\n' "$networks" | awk '$NF == "[CURRENT]" { print $1; exit }')"
 case "$network_id" in
     ''|*[!0-9]*)
-        logger -t steamos-wifi-bgscan "no active wpa_supplicant network on $interface"
-        exit 0
+        log_message "no active wpa_supplicant network on $interface"
+        exit 1
         ;;
 esac
 
 result="$(wpa_cli -i "$interface" set_network "$network_id" bgscan '""' 2>/dev/null)" || {
-    logger -t steamos-wifi-bgscan "could not disable background scans for network $network_id on $interface"
-    exit 0
+    log_message "could not disable background scans for network $network_id on $interface"
+    exit 1
 }
 if [ "$result" != "OK" ]; then
-    logger -t steamos-wifi-bgscan "wpa_supplicant rejected the bgscan setting for network $network_id on $interface"
-    exit 0
+    log_message "wpa_supplicant rejected the bgscan setting for network $network_id on $interface"
+    exit 1
 fi
 
-logger -t steamos-wifi-bgscan "disabled background scans for network $network_id on $interface"
+log_message "disabled background scans for network $network_id on $interface"
